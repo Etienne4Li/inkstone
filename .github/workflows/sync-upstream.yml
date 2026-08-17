@@ -1,0 +1,48 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+    - cron: "33 5 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream-main
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge upstream main into this fork
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            --method POST \
+            --header "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/merge-upstream" \
+            -f branch=main
+
+  keep-schedule-active:
+    if: github.event_name == 'schedule' && github.event.schedule == '33 5 1 * *'
+    needs: sync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the latest fork state
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Record monthly scheduler activity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          date -u +%Y-%m-%dT%H:%M:%SZ > .github/upstream-sync-heartbeat
+          git add .github/upstream-sync-heartbeat
+          git commit -m "chore: keep upstream sync active"
+          git push origin main
