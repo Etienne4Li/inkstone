@@ -27,6 +27,31 @@ jobs:
             "repos/${GITHUB_REPOSITORY}/merge-upstream" \
             -f branch=main
 
+      - name: Check out the synchronized revision
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Use the supported Node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate the synchronized revision
+        run: |
+          npm run i18n:check
+          npm run comments:check
+          npm run test:unit
+          npm run build
+
+      - name: Promote the validated revision
+        run: git push origin HEAD:refs/heads/deploy
+
   keep-schedule-active:
     if: github.event_name == 'schedule' && github.event.schedule == '33 5 1 * *'
     needs: sync
