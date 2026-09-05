@@ -16,9 +16,10 @@ import { NoteList } from '../list/NoteList';
 import { FloatingSearch } from './FloatingSearch';
 import { Resizer, SplitResizer } from './Resizer';
 import { t } from "../../lib/i18n";
+import { SettingsPanel } from '../settings/SettingsPanel';
+import { scheduleSettingsWarmup } from '../settings/sections';
 const Workspace = lazy(() => import('../workspace/Workspace').then((m) => ({ default: m.Workspace })));
 const CommandPalette = lazy(() => import('../command/CommandPalette').then((m) => ({ default: m.CommandPalette })));
-const SettingsPanel = lazy(() => import('../settings/SettingsPanel').then((m) => ({ default: m.SettingsPanel })));
 const ShortcutsPanel = lazy(() => import('../command/ShortcutsPanel').then((m) => ({ default: m.ShortcutsPanel })));
 const GraphPanel = lazy(() => import('../graph/GraphPanel').then((m) => ({ default: m.GraphPanel })));
 const SharePanel = lazy(() => import('../share/SharePanel').then((m) => ({ default: m.SharePanel })));
@@ -28,6 +29,8 @@ const UpdateDialog = lazy(() => import('../update/UpdateDialog').then((m) => ({ 
 export function AppShell() {
     const breakpoint = useBreakpoint();
     const role = useSession((s) => s.user?.role);
+    const userId = useSession((s) => s.user?.id);
+    useEffect(() => scheduleSettingsWarmup(), [userId]);
     const checkForUpdates = useUpdate((s) => s.check);
     useSyncEngine();
     useGlobalHotkeys();
@@ -176,15 +179,16 @@ function WorkspaceFallback() {
 }
 
 function OverlayHost() {
+    const userId = useSession((s) => s.user?.id);
     const panel = useUi((s) => s.panel);
     const closePanel = useUi((s) => s.closePanel);
     const lightbox = useUi((s) => s.lightbox);
     const role = useSession((s) => s.user?.role);
     const updateDialogOpen = useUpdate((s) => s.dialogOpen);
     return (<>
+      {panel === 'settings' && <SettingsPanel key={userId} onClose={closePanel}/>}
       <Suspense fallback={null}>
         {panel === 'command' && <CommandPalette onClose={closePanel}/>}
-        {panel === 'settings' && <SettingsPanel onClose={closePanel}/>}
         {panel === 'shortcuts' && <ShortcutsPanel onClose={closePanel}/>}
         {panel === 'graph' && <GraphPanel onClose={closePanel}/>}
         {panel === 'share' && <SharePanel onClose={closePanel}/>}
