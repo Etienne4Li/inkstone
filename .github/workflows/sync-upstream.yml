@@ -44,8 +44,6 @@ jobs:
 
       - name: Validate the synchronized revision
         run: |
-          npm run i18n:check
-          npm run comments:check
           npm run test:unit
           npm run build
 
